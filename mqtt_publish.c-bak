@@ -1,0 +1,51 @@
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include<errno.h>
+#include<unistd.h>
+#include"MQTTClient.h"
+
+int main(int argc, char**argv)
+{
+        char *address="tcp://a1Z3gJPfHdh.iot-as-mqtt.cn-shanghai.aliyuncs.com:443";
+        char *client_id="stm-esp&a1Z3gJPfHdh|timestamp=2524608000000,_v=paho-c-1.0.0,securemode=3,signmethod=hmacsha256,lan=C|";
+        char *topic="/a1Z3gJPfHdh/stm-esp/user/update";
+        char buf[1024];
+        const int time_out=1000;
+        int rv; 
+        int QOS=1;
+
+        MQTTClient client;
+        MQTTClient_connectOptions conn_opts=MQTTClient_connectOptions_initializer;
+        MQTTClient_message publish_msg=MQTTClient_message_initializer;
+        MQTTClient_deliveryToken token;
+    
+        conn_opts.keepAliveInterval=60;
+        conn_opts.cleansession=1;
+	conn_opts.username = "stm-esp&a1Z3gJPfHdh";
+	conn_opts.password = "899A78FC6241776CE0FB4D868452A1F744E4C5AB2F427A13F212F0BA201FC162";
+
+        MQTTClient_create(&client, address, client_id, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+        if((rv=MQTTClient_connect(client, &conn_opts))!=MQTTCLIENT_SUCCESS)
+        {   
+                printf("MQTTClient_connect failure:%s\n",strerror(errno) );
+                return 0;
+        }    
+        publish_msg.qos=QOS;
+        publish_msg.retained=0;
+        while(1)
+        {    
+                printf("enter the message you want to send:");
+                fgets(buf,sizeof(buf), stdin);
+                publish_msg.payload=(void *)buf;
+                publish_msg.payloadlen=strlen(buf);
+                MQTTClient_publishMessage(client, topic, &publish_msg, &token);
+                printf("waiting for %d seconds for publication of %s on topic %s for client with CLIENTD:%s\n",time_out/1000,buf,topic, client_id);
+                rv = MQTTClient_waitForCompletion(client, token, time_out);
+                printf("Message with delivery token %d delivery\n",rv);
+                printf("%s\n",buf);
+                sleep(3);
+        }
+}
+
+
